@@ -29,10 +29,32 @@
     .qty-btn{width:32px;height:32px;border-radius:6px;border:0;background:#ecf0f1;cursor:pointer}
     .file-label{display:inline-block;padding:10px;background:#ecf0f1;border-radius:8px;border:2px dashed #bdc3c7;cursor:pointer;color:#7f8c8d}
     .img-preview{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px dashed #ddd;display:block;margin-top:8px}
+
+    /* ====== شريط حالة الحفظ التلقائي ====== */
+    .save-status-bar{position:fixed;top:0;left:0;right:0;padding:8px 15px;text-align:center;font-size:13px;z-index:150;display:none;transition:all 0.3s}
+    .save-status-bar.saving{background:#f39c12;color:#fff}
+    .save-status-bar.saved{background:#27ae60;color:#fff}
+    .save-status-bar.error{background:#e74c3c;color:#fff}
+
+    /* ====== زر الحفظ اليدوي ====== */
+    .save-now-btn{background:#8e44ad;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%;margin-top:10px;font-size:15px}
+    .save-now-btn:hover{background:#732d91}
+    .save-now-btn:disabled{background:#95a5a6;cursor:not-allowed}
+
+    .auto-save-toggle{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px;background:#f8f9fa;border-radius:8px}
+    .toggle-switch{position:relative;width:50px;height:26px;background:#bdc3c7;border-radius:13px;cursor:pointer;transition:0.3s}
+    .toggle-switch.active{background:#27ae60}
+    .toggle-switch::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;right:2px;transition:0.3s}
+    .toggle-switch.active::after{right:26px}
+
     @media(min-width:768px){.products{grid-template-columns:repeat(3,1fr);max-width:900px;margin:0 auto}}
   </style>
+<base target="_blank">
 </head>
 <body>
+
+  <!-- ====== شريط حالة الحفظ التلقائي ====== -->
+  <div class="save-status-bar" id="saveStatusBar"></div>
 
   <div id="storeView">
     <div class="header"><h1>🍽️ اوقات الدوام من 8:00 صباحاً إلى 22:00 مساءً</h1><div id="storeSubtitle" style="font-size:12px;opacity:.9">أطلب الآن عبر الواتساب</div></div>
@@ -66,7 +88,7 @@
       <textarea id="adminStoreDesc" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd"></textarea>
       <label>رقم الواتساب (بدون +)</label>
       <input id="adminWhatsapp" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd">
-      <button onclick="saveStoreSettings()" style="background:#3498db;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%">💾 حفظ الإعدادات محلياً</button>
+      <button onclick="saveStoreSettings()" style="background:#3498db;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%">💾 حفظ الإعدادات</button>
     </div>
 
     <div class="admin-section">
@@ -98,10 +120,28 @@
       <div id="adminProductsList"></div>
     </div>
 
+    <!-- ====== قسم الحفظ التلقائي على GitHub ====== -->
     <div class="admin-section">
-      <h3>⚠️ حفظ التغييرات إلى GitHub</h3>
-      <p style="font-size:13px;color:#666">اضغط للحفظ إلى المستودع: سُيطلب منك إدخال owner, repo, path (مثل index.html) وPersonal Access Token مؤقت (session only).</p>
-      <button onclick="startSaveToGitHub()" style="background:#8e44ad;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%">✨ حفظ إلى GitHub</button>
+      <h3>☁️ الحفظ التلقائي على GitHub</h3>
+      <p style="font-size:13px;color:#666;margin-bottom:10px">
+        ✅ الحفظ التلقائي شغال — أي تعديل يتحفظ فوراً على GitHub
+      </p>
+
+      <div class="auto-save-toggle">
+        <span>الحفظ التلقائي</span>
+        <div class="toggle-switch active" id="autoSaveToggle" onclick="toggleAutoSave()"></div>
+        <span id="autoSaveStatus">مفعّل</span>
+      </div>
+
+      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px;margin:10px 0;font-size:12px;color:#856404">
+        <strong>⚠️ تحذير أمان:</strong> التوكن مخزن في الكود. لا ترفع هالملف على GitHub publicly!
+      </div>
+
+      <button class="save-now-btn" id="saveNowBtn" onclick="manualSaveToGitHub()">
+        🔄 حفظ يدوي الآن
+      </button>
+
+      <div id="lastSaveTime" style="text-align:center;margin-top:8px;font-size:12px;color:#666"></div>
     </div>
   </div>
 
@@ -132,8 +172,6 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="savingModal" style="display:none"><div class="modal-content" id="savingContent"><p>جاري الحفظ...</p></div></div>
-
   <div class="cart-bar" id="cartBar" style="display:none">
     <div style="display:flex;align-items:center;gap:12px">
       <div class="cart-icon">🛒<div class="cart-count" id="cartCount">0</div></div>
@@ -150,31 +188,29 @@
   <div class="toast" id="toast"></div>
 
 <script>
+/* ============================================================
+   ⚠️ تحذير أمان مهم ⚠️
+   التوكن أدناه مخزن مباشرة في الكود.
+   لا ترفع هالملف على GitHub publicly!
+   ============================================================ */
+
+/* ======= إعدادات GitHub (مضمنة مباشرة) ======= */
+const GITHUB_CONFIG = {
+  owner: "omerhalil32321-byte",
+  repo: "o",
+  path: "index.html",
+  token: "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",
+  autoSave: true  // الحفظ التلقائي مفعّل افتراضياً
+};
+
 /* ======= بيانات افتراضية ======= */
 const ADMIN_PASSWORD = "085085";
 const defaultProducts = [
-    {
-        "id": 1,
-        "name": "فتوش",
-        "desc": "سلطة شهية",
-        "price": 400,
-        "category": "appetizer",
-        "image": "https://placehold.co/400x300/e74c3c/ffffff?text=Fattoush"
-    },
-    {
-        "id": 22,
-        "name": "وجبة شاورما",
-        "desc": "لحم طازج",
-        "price": 1000,
-        "category": "main",
-        "image": "https://placehold.co/400x300/e74c3c/ffffff?text=Shawarma"
-    }
+  {"id":1,"name":"فتوش","desc":"سلطة شهية","price":400,"category":"appetizer","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Fattoush"},
+  {"id":16,"name":"وجبة كرسبي","desc":"تقدم مع بطاطا","price":1500,"category":"main","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Crispy"},
+  {"id":22,"name":"وجبة شاورما","desc":"لحم طازج","price":1000,"category":"main","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Shawarma"}
 ];
-const defaultStore = {
-    "name": "مطعم يزن",
-    "desc": "أشهى المأكولات - توصيل سريع",
-    "whatsapp": "963981738986"
-};
+const defaultStore = {"name":"مطعم يزن","desc":"أشهى المأكولات - توصيل سريع","whatsapp":"963981738986"};
 
 /* ======= حالة التطبيق ======= */
 let products = [];
@@ -182,6 +218,8 @@ let storeSettings = {};
 let cart = [];
 let currentCategory = 'all';
 let currentImageBase64 = null;
+let saveTimeout = null;
+let isSaving = false;
 
 /* ======= تهيئة ======= */
 function init(){
@@ -189,13 +227,205 @@ function init(){
   renderStore();
   renderAdminProducts();
   updateCartUI();
+  updateAutoSaveUI();
 }
+
 function loadData(){
-  products = JSON.parse(JSON.stringify(defaultProducts));
-  storeSettings = JSON.parse(JSON.stringify(defaultStore));
+  // نحاول نجيب البيانات من localStorage أولاً
+  const savedProducts = localStorage.getItem('shop_products_v2');
+  const savedStore = localStorage.getItem('shop_store_v2');
+
+  if(savedProducts){
+    try{ products = JSON.parse(savedProducts); } catch(e){ products = JSON.parse(JSON.stringify(defaultProducts)); }
+  } else {
+    products = JSON.parse(JSON.stringify(defaultProducts));
+  }
+
+  if(savedStore){
+    try{ storeSettings = JSON.parse(savedStore); } catch(e){ storeSettings = JSON.parse(JSON.stringify(defaultStore)); }
+  } else {
+    storeSettings = JSON.parse(JSON.stringify(defaultStore));
+  }
+
+  // إعدادات الحفظ التلقائي
+  const savedAutoSave = localStorage.getItem('shop_autosave');
+  if(savedAutoSave !== null) GITHUB_CONFIG.autoSave = savedAutoSave === 'true';
+
   const savedCart = localStorage.getItem('shop_cart_v1');
   cart = savedCart ? JSON.parse(savedCart) : [];
   updateStoreDisplay();
+}
+
+/* ======= حفظ محلي + تلقائي على GitHub ======= */
+function saveLocalData(){
+  localStorage.setItem('shop_products_v2', JSON.stringify(products));
+  localStorage.setItem('shop_store_v2', JSON.stringify(storeSettings));
+
+  // إذا الحفظ التلقائي مفعّل، نحفظ على GitHub
+  if(GITHUB_CONFIG.autoSave && !isSaving){
+    debouncedGitHubSave();
+  }
+}
+
+/* ======= الحفظ التلقائي على GitHub (مع تأخير 2 ثانية) ======= */
+function debouncedGitHubSave(){
+  if(saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    autoSaveToGitHub();
+  }, 2000);
+}
+
+/* ======= شريط حالة الحفظ ======= */
+function showSaveStatus(status, message){
+  const bar = document.getElementById('saveStatusBar');
+  bar.className = 'save-status-bar ' + status;
+  bar.textContent = message;
+  bar.style.display = 'block';
+  if(status === 'saved'){
+    setTimeout(() => { bar.style.display = 'none'; }, 3000);
+  }
+}
+
+/* ======= الحفظ التلقائي على GitHub ======= */
+async function autoSaveToGitHub(){
+  if(isSaving) return;
+  isSaving = true;
+  showSaveStatus('saving', '⏳ جاري الحفظ على GitHub...');
+
+  try{
+    const success = await doGitHubSave('Auto-save from admin panel');
+    if(success){
+      showSaveStatus('saved', '✅ تم الحفظ على GitHub');
+      updateLastSaveTime();
+    } else {
+      showSaveStatus('error', '❌ فشل الحفظ على GitHub');
+    }
+  } catch(err){
+    console.error('Auto-save error:', err);
+    showSaveStatus('error', '❌ خطأ في الحفظ التلقائي');
+  } finally {
+    isSaving = false;
+  }
+}
+
+/* ======= الحفظ اليدوي على GitHub ======= */
+async function manualSaveToGitHub(){
+  if(isSaving) return;
+  const btn = document.getElementById('saveNowBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+  showSaveStatus('saving', '⏳ جاري الحفظ اليدوي على GitHub...');
+
+  try{
+    const success = await doGitHubSave('Manual save from admin panel');
+    if(success){
+      showSaveStatus('saved', '✅ تم الحفظ اليدوي بنجاح!');
+      showToast('✅ تم الحفظ على GitHub بنجاح!');
+      updateLastSaveTime();
+    } else {
+      showSaveStatus('error', '❌ فشل الحفظ اليدوي');
+      showToast('❌ فشل الحفظ على GitHub');
+    }
+  } catch(err){
+    console.error('Manual save error:', err);
+    showSaveStatus('error', '❌ خطأ: ' + err.message);
+    showToast('❌ خطأ في الحفظ');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 حفظ يدوي الآن';
+    isSaving = false;
+  }
+}
+
+/* ======= دالة الحفظ الفعلية على GitHub ======= */
+async function doGitHubSave(commitMessage){
+  const productsJSON = JSON.stringify(products, null, 4);
+  const storeJSON = JSON.stringify(storeSettings, null, 4);
+
+  // نجيب HTML الصفحة الحالية
+  const pageHtml = document.documentElement.outerHTML;
+
+  // نستبدل البيانات في الكود
+  let updatedHtml = pageHtml;
+
+  // نستبدل defaultProducts
+  updatedHtml = updatedHtml.replace(
+    /const defaultProducts = \[[\s\S]*?\];/,
+    `const defaultProducts = ${productsJSON};`
+  );
+
+  // نستبدل defaultStore
+  updatedHtml = updatedHtml.replace(
+    /const defaultStore = \{[\s\S]*?\};/,
+    `const defaultStore = ${storeJSON};`
+  );
+
+  const apiBase = 'https://api.github.com';
+  const fileUrl = `${apiBase}/repos/${encodeURIComponent(GITHUB_CONFIG.owner)}/${encodeURIComponent(GITHUB_CONFIG.repo)}/contents/${encodeURIComponent(GITHUB_CONFIG.path)}`;
+  const headers = {
+    'Authorization': 'Bearer ' + GITHUB_CONFIG.token,
+    'Accept': 'application/vnd.github+json'
+  };
+
+  // نجيب SHA الملف الحالي
+  let sha = null;
+  let getResp = await fetch(fileUrl, {headers});
+  if(getResp.status === 200){
+    const d = await getResp.json();
+    sha = d.sha;
+  } else if(getResp.status !== 404){
+    const txt = await getResp.text();
+    console.error('GitHub GET error:', getResp.status, txt);
+    return false;
+  }
+
+  // نحفظ الملف
+  const putBody = {
+    message: commitMessage,
+    content: btoa(unescape(encodeURIComponent(updatedHtml))),
+    committer: { name: 'site-admin', email: 'admin@example.com' }
+  };
+  if(sha) putBody.sha = sha;
+
+  const putResp = await fetch(fileUrl, {
+    method: 'PUT',
+    headers: {...headers, 'Content-Type': 'application/json'},
+    body: JSON.stringify(putBody)
+  });
+
+  if(!putResp.ok){
+    const txt = await putResp.text();
+    console.error('GitHub PUT error:', putResp.status, txt);
+    return false;
+  }
+
+  return true;
+}
+
+/* ======= تفعيل/إيقاف الحفظ التلقائي ======= */
+function toggleAutoSave(){
+  GITHUB_CONFIG.autoSave = !GITHUB_CONFIG.autoSave;
+  localStorage.setItem('shop_autosave', GITHUB_CONFIG.autoSave);
+  updateAutoSaveUI();
+  showToast(GITHUB_CONFIG.autoSave ? '✅ الحفظ التلقائي مفعّل' : '⏸️ الحفظ التلقائي متوقف');
+}
+
+function updateAutoSaveUI(){
+  const toggle = document.getElementById('autoSaveToggle');
+  const status = document.getElementById('autoSaveStatus');
+  if(GITHUB_CONFIG.autoSave){
+    toggle.classList.add('active');
+    status.textContent = 'مفعّل';
+  } else {
+    toggle.classList.remove('active');
+    status.textContent = 'متوقف';
+  }
+}
+
+function updateLastSaveTime(){
+  const el = document.getElementById('lastSaveTime');
+  const now = new Date().toLocaleString('ar-SY');
+  el.textContent = 'آخر حفظ: ' + now;
 }
 
 /* ======= واجهة المتجر ======= */
@@ -313,7 +543,7 @@ function sendCartOrder(){
   cart = []; saveCartData(); updateCartUI(); closeCartModal(); showToast('📱 تم فتح الواتساب لإرسال الطلب!');
 }
 
-/* ======= إدارة المنتجات (صورة من المعرض) ======= */
+/* ======= إدارة المنتجات ======= */
 function previewImageFile(input){
   if(input.files && input.files[0]){
     const file = input.files[0];
@@ -350,7 +580,11 @@ function saveProduct(){
   // تنظيف نموذج
   document.getElementById('productName').value='';document.getElementById('productDesc').value='';document.getElementById('productPrice').value='';document.getElementById('editProductId').value='';document.getElementById('productImageFile').value='';document.getElementById('imagePreview').style.display='none';
   currentImageBase64 = null;
-  renderAdminProducts(); renderStore(); showToast('✅ تم حفظ المنتج محلياً');
+
+  // حفظ محلي + تلقائي على GitHub
+  saveLocalData();
+
+  renderAdminProducts(); renderStore(); showToast('✅ تم حفظ المنتج');
 }
 
 function editProduct(id){
@@ -362,7 +596,9 @@ function editProduct(id){
 
 function deleteProduct(id){
   if(!confirm('تأكيد حذف المنتج؟')) return;
-  products = products.filter(p=>p.id!=id); renderAdminProducts(); renderStore(); showToast('🗑️ حُذف المنتج');
+  products = products.filter(p=>p.id!=id);
+  saveLocalData();
+  renderAdminProducts(); renderStore(); showToast('🗑️ حُذف المنتج');
 }
 
 function renderAdminProducts(){
@@ -384,7 +620,14 @@ function renderAdminProducts(){
 }
 
 /* ======= إعداد المتجر ======= */
-function saveStoreSettings(){ storeSettings.name = document.getElementById('adminStoreName').value.trim() || storeSettings.name; storeSettings.desc = document.getElementById('adminStoreDesc').value.trim() || storeSettings.desc; storeSettings.whatsapp = document.getElementById('adminWhatsapp').value.replace(/[^0-9]/g,'') || storeSettings.whatsapp; updateStoreDisplay(); showToast('✅ تم تحديث الإعدادات محلياً'); }
+function saveStoreSettings(){
+  storeSettings.name = document.getElementById('adminStoreName').value.trim() || storeSettings.name;
+  storeSettings.desc = document.getElementById('adminStoreDesc').value.trim() || storeSettings.desc;
+  storeSettings.whatsapp = document.getElementById('adminWhatsapp').value.replace(/[^0-9]/g,'') || storeSettings.whatsapp;
+  updateStoreDisplay();
+  saveLocalData();
+  showToast('✅ تم تحديث الإعدادات');
+}
 
 /* ======= حماية الدخول ======= */
 function showAdmin(){ document.getElementById('passwordInput').value=''; document.getElementById('passwordError').style.display='none'; document.getElementById('passwordModal').style.display='flex'; setTimeout(()=>document.getElementById('passwordInput').focus(),120); }
@@ -392,65 +635,6 @@ function checkPassword(){ const v = document.getElementById('passwordInput').val
 function closePasswordModal(){ document.getElementById('passwordModal').style.display='none'; }
 document.getElementById('passwordInput').addEventListener('keypress', e=>{ if(e.key==='Enter') checkPassword(); });
 function showStore(){ document.getElementById('storeView').style.display='block'; document.getElementById('adminPanel').style.display='none'; renderStore(); }
-
-/* ======= حفظ إلى GitHub (من المتصفح) ======= */
-async function startSaveToGitHub(){
-  try{
-    showSavingModal(true,'جاري تجهيز الكود...');
-    const productsJSON = JSON.stringify(products, null, 4);
-    const storeJSON = JSON.stringify(storeSettings, null, 4);
-
-    const pageHtml = await fetch(window.location.href, {cache:'no-store'}).then(r=>r.text());
-    let updatedHtml = pageHtml.replace(/const defaultProducts = \[[\s\S]*?\];/, `const defaultProducts = ${productsJSON};`);
-    updatedHtml = updatedHtml.replace(/const defaultStore = \{[\s\S]*?\};/, `const defaultStore = ${storeJSON};`);
-
-    const owner = prompt('ادخل owner (اسم الحساب أو المنظمة على GitHub):', localStorage.getItem('gh_owner')||'');
-    if(owner===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
-    const repo = prompt('ادخل repo (اسم المستودع):', localStorage.getItem('gh_repo')||'');
-    if(repo===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
-    const path = prompt('ادخل مسار الملف داخل المستودع (مثل index.html):', localStorage.getItem('gh_path')||'index.html');
-    if(path===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
-    const message = prompt('ادخل رسالة الـ commit:', 'Update store content from admin panel');
-    if(message===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
-
-    localStorage.setItem('gh_owner', owner); localStorage.setItem('gh_repo', repo); localStorage.setItem('gh_path', path);
-
-    let token = sessionStorage.getItem('gh_token') || '';
-    if(!token){
-      token = prompt('أدخل Personal Access Token (PAT) بصلاحية repo (سيُخزن مؤقتاً في هذه الجلسة فقط):');
-      if(!token){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
-      sessionStorage.setItem('gh_token', token);
-    }
-
-    showSavingModal(true,'جاري حفظ الملف على GitHub...');
-
-    const apiBase = 'https://api.github.com';
-    const fileUrl = `${apiBase}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodeURIComponent(path)}`;
-    const headers = {'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'};
-
-    let sha = null;
-    let getResp = await fetch(fileUrl, {headers});
-    if(getResp.status===200){ const d = await getResp.json(); sha = d.sha; }
-    else if(getResp.status===404){ sha = null; }
-    else { const txt = await getResp.text(); alert('فشل التحقق من الملف على GitHub: '+getResp.status+'\n'+txt); showSavingModal(false); return; }
-
-    const putBody = { message: message, content: btoa(unescape(encodeURIComponent(updatedHtml))), committer: { name: 'site-admin', email: 'admin@example.com' } };
-    if(sha) putBody.sha = sha;
-
-    const putResp = await fetch(fileUrl, { method:'PUT', headers:{...headers,'Content-Type':'application/json'}, body: JSON.stringify(putBody) });
-    if(!putResp.ok){ const txt = await putResp.text(); alert('فشل الحفظ على GitHub: '+putResp.status+'\n'+txt); showSavingModal(false); return; }
-    const putData = await putResp.json();
-    showSavingModal(false); showToast('✅ تم الحفظ في المستودع بنجاح!');
-    if(putData && putData.commit && putData.commit.html_url){ if(confirm('فتح صفحة commit على GitHub؟')) window.open(putData.commit.html_url,'_blank'); }
-  }catch(err){
-    console.error(err); showSavingModal(false); alert('حدث خطأ أثناء الحفظ: '+err);
-  }
-}
-
-function showSavingModal(show, text){
-  const m = document.getElementById('savingModal'); const c = document.getElementById('savingContent');
-  if(show){ c.innerHTML = `<p>${text||'جارٍ...'}</p>`; m.style.display='flex'; } else m.style.display='none';
-}
 
 /* ======= مساعدة ======= */
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); }
