@@ -30,22 +30,21 @@
     .file-label{display:inline-block;padding:10px;background:#ecf0f1;border-radius:8px;border:2px dashed #bdc3c7;cursor:pointer;color:#7f8c8d}
     .img-preview{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px dashed #ddd;display:block;margin-top:8px}
 
-    /* ====== شريط حالة الحفظ التلقائي ====== */
+    /* ====== شريط حالة الحفظ ====== */
     .save-status-bar{position:fixed;top:0;left:0;right:0;padding:8px 15px;text-align:center;font-size:13px;z-index:150;display:none;transition:all 0.3s}
     .save-status-bar.saving{background:#f39c12;color:#fff}
     .save-status-bar.saved{background:#27ae60;color:#fff}
     .save-status-bar.error{background:#e74c3c;color:#fff}
 
-    /* ====== زر الحفظ اليدوي ====== */
-    .save-now-btn{background:#8e44ad;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%;margin-top:10px;font-size:15px}
-    .save-now-btn:hover{background:#732d91}
-    .save-now-btn:disabled{background:#95a5a6;cursor:not-allowed}
+    /* ====== زر الحفظ على GitHub ====== */
+    .save-gh-btn{background:#8e44ad;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%;margin-top:10px;font-size:15px;font-weight:bold}
+    .save-gh-btn:hover{background:#732d91}
+    .save-gh-btn:disabled{background:#95a5a6;cursor:not-allowed}
 
-    .auto-save-toggle{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px;background:#f8f9fa;border-radius:8px}
-    .toggle-switch{position:relative;width:50px;height:26px;background:#bdc3c7;border-radius:13px;cursor:pointer;transition:0.3s}
-    .toggle-switch.active{background:#27ae60}
-    .toggle-switch::after{content:'';position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;right:2px;transition:0.3s}
-    .toggle-switch.active::after{right:26px}
+    .gh-input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-family:inherit}
+    .gh-input:focus{outline:none;border-color:#8e44ad}
+
+    .last-save-info{text-align:center;margin-top:8px;font-size:12px;color:#666;padding:8px;background:#f8f9fa;border-radius:6px}
 
     @media(min-width:768px){.products{grid-template-columns:repeat(3,1fr);max-width:900px;margin:0 auto}}
   </style>
@@ -53,7 +52,7 @@
 </head>
 <body>
 
-  <!-- ====== شريط حالة الحفظ التلقائي ====== -->
+  <!-- ====== شريط حالة الحفظ ====== -->
   <div class="save-status-bar" id="saveStatusBar"></div>
 
   <div id="storeView">
@@ -120,28 +119,23 @@
       <div id="adminProductsList"></div>
     </div>
 
-    <!-- ====== قسم الحفظ التلقائي على GitHub ====== -->
+    <!-- ====== قسم الحفظ على GitHub (يدوي فقط) ====== -->
     <div class="admin-section">
-      <h3>☁️ الحفظ التلقائي على GitHub</h3>
+      <h3>☁️ حفظ على GitHub</h3>
       <p style="font-size:13px;color:#666;margin-bottom:10px">
-        ✅ الحفظ التلقائي شغال — أي تعديل يتحفظ فوراً على GitHub
+        اضغط "حفظ على GitHub" لحفظ كل التعديلات على المستودع. الزباين راح يشوفون التعديلات فوراً.
       </p>
 
-      <div class="auto-save-toggle">
-        <span>الحفظ التلقائي</span>
-        <div class="toggle-switch active" id="autoSaveToggle" onclick="toggleAutoSave()"></div>
-        <span id="autoSaveStatus">مفعّل</span>
-      </div>
+      <label>GitHub Token (PAT)</label>
+      <input type="password" id="ghTokenInput" class="gh-input" placeholder="ادخل التوكن هنا...">
 
-      <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px;margin:10px 0;font-size:12px;color:#856404">
-        <strong>⚠️ تحذير أمان:</strong> التوكن مخزن في الكود. لا ترفع هالملف على GitHub publicly!
-      </div>
-
-      <button class="save-now-btn" id="saveNowBtn" onclick="manualSaveToGitHub()">
-        🔄 حفظ يدوي الآن
+      <button class="save-gh-btn" id="saveGhBtn" onclick="saveToGitHub()">
+        ☁️ حفظ على GitHub
       </button>
 
-      <div id="lastSaveTime" style="text-align:center;margin-top:8px;font-size:12px;color:#666"></div>
+      <div class="last-save-info" id="lastSaveInfo">
+        لم يتم الحفظ بعد
+      </div>
     </div>
   </div>
 
@@ -188,19 +182,12 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ============================================================
-   ⚠️ تحذير أمان مهم ⚠️
-   التوكن أدناه مخزن مباشرة في الكود.
-   لا ترفع هالملف على GitHub publicly!
-   ============================================================ */
-
-/* ======= إعدادات GitHub (مضمنة مباشرة) ======= */
+/* ======= إعدادات GitHub (مخفية — بدون توكن) ======= */
 const GITHUB_CONFIG = {
   owner: "omerhalil32321-byte",
   repo: "o",
-  path: "index.html",
-  token: "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",
-  autoSave: true  // الحفظ التلقائي مفعّل افتراضياً
+  path: "index.html"
+  // التوكن يُطلب عند الحفظ فقط
 };
 
 /* ======= بيانات افتراضية ======= */
@@ -218,7 +205,6 @@ let storeSettings = {};
 let cart = [];
 let currentCategory = 'all';
 let currentImageBase64 = null;
-let saveTimeout = null;
 let isSaving = false;
 
 /* ======= تهيئة ======= */
@@ -227,52 +213,14 @@ function init(){
   renderStore();
   renderAdminProducts();
   updateCartUI();
-  updateAutoSaveUI();
 }
 
 function loadData(){
-  // نحاول نجيب البيانات من localStorage أولاً
-  const savedProducts = localStorage.getItem('shop_products_v2');
-  const savedStore = localStorage.getItem('shop_store_v2');
-
-  if(savedProducts){
-    try{ products = JSON.parse(savedProducts); } catch(e){ products = JSON.parse(JSON.stringify(defaultProducts)); }
-  } else {
-    products = JSON.parse(JSON.stringify(defaultProducts));
-  }
-
-  if(savedStore){
-    try{ storeSettings = JSON.parse(savedStore); } catch(e){ storeSettings = JSON.parse(JSON.stringify(defaultStore)); }
-  } else {
-    storeSettings = JSON.parse(JSON.stringify(defaultStore));
-  }
-
-  // إعدادات الحفظ التلقائي
-  const savedAutoSave = localStorage.getItem('shop_autosave');
-  if(savedAutoSave !== null) GITHUB_CONFIG.autoSave = savedAutoSave === 'true';
-
+  products = JSON.parse(JSON.stringify(defaultProducts));
+  storeSettings = JSON.parse(JSON.stringify(defaultStore));
   const savedCart = localStorage.getItem('shop_cart_v1');
   cart = savedCart ? JSON.parse(savedCart) : [];
   updateStoreDisplay();
-}
-
-/* ======= حفظ محلي + تلقائي على GitHub ======= */
-function saveLocalData(){
-  localStorage.setItem('shop_products_v2', JSON.stringify(products));
-  localStorage.setItem('shop_store_v2', JSON.stringify(storeSettings));
-
-  // إذا الحفظ التلقائي مفعّل، نحفظ على GitHub
-  if(GITHUB_CONFIG.autoSave && !isSaving){
-    debouncedGitHubSave();
-  }
-}
-
-/* ======= الحفظ التلقائي على GitHub (مع تأخير 2 ثانية) ======= */
-function debouncedGitHubSave(){
-  if(saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    autoSaveToGitHub();
-  }, 2000);
 }
 
 /* ======= شريط حالة الحفظ ======= */
@@ -281,64 +229,53 @@ function showSaveStatus(status, message){
   bar.className = 'save-status-bar ' + status;
   bar.textContent = message;
   bar.style.display = 'block';
-  if(status === 'saved'){
-    setTimeout(() => { bar.style.display = 'none'; }, 3000);
+  if(status === 'saved' || status === 'error'){
+    setTimeout(() => { bar.style.display = 'none'; }, 4000);
   }
 }
 
-/* ======= الحفظ التلقائي على GitHub ======= */
-async function autoSaveToGitHub(){
+/* ======= الحفظ على GitHub (يدوي + يطلب التوكن) ======= */
+async function saveToGitHub(){
   if(isSaving) return;
+
+  const tokenInput = document.getElementById('ghTokenInput').value.trim();
+  if(!tokenInput){
+    showToast('❌ ادخل GitHub Token أولاً');
+    document.getElementById('ghTokenInput').focus();
+    return;
+  }
+
   isSaving = true;
+  const btn = document.getElementById('saveGhBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ على GitHub...';
   showSaveStatus('saving', '⏳ جاري الحفظ على GitHub...');
 
   try{
-    const success = await doGitHubSave('Auto-save from admin panel');
+    const success = await doGitHubSave(tokenInput, 'Update store from admin panel');
     if(success){
-      showSaveStatus('saved', '✅ تم الحفظ على GitHub');
-      updateLastSaveTime();
-    } else {
-      showSaveStatus('error', '❌ فشل الحفظ على GitHub');
-    }
-  } catch(err){
-    console.error('Auto-save error:', err);
-    showSaveStatus('error', '❌ خطأ في الحفظ التلقائي');
-  } finally {
-    isSaving = false;
-  }
-}
-
-/* ======= الحفظ اليدوي على GitHub ======= */
-async function manualSaveToGitHub(){
-  if(isSaving) return;
-  const btn = document.getElementById('saveNowBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الحفظ...';
-  showSaveStatus('saving', '⏳ جاري الحفظ اليدوي على GitHub...');
-
-  try{
-    const success = await doGitHubSave('Manual save from admin panel');
-    if(success){
-      showSaveStatus('saved', '✅ تم الحفظ اليدوي بنجاح!');
+      showSaveStatus('saved', '✅ تم الحفظ على GitHub — الزباين راح يشوفون التعديلات');
       showToast('✅ تم الحفظ على GitHub بنجاح!');
-      updateLastSaveTime();
+      updateLastSaveInfo('تم الحفظ بنجاح');
+      // نمسح التوكن من الحقل لأسباب أمان
+      document.getElementById('ghTokenInput').value = '';
     } else {
-      showSaveStatus('error', '❌ فشل الحفظ اليدوي');
-      showToast('❌ فشل الحفظ على GitHub');
+      showSaveStatus('error', '❌ فشل الحفظ على GitHub — تحقق من التوكن');
+      showToast('❌ فشل الحفظ — التوكن غير صحيح أو ما عنده صلاحية');
     }
   } catch(err){
-    console.error('Manual save error:', err);
-    showSaveStatus('error', '❌ خطأ: ' + err.message);
+    console.error('Save error:', err);
+    showSaveStatus('error', '❌ خطأ: ' + (err.message || 'فشل الاتصال'));
     showToast('❌ خطأ في الحفظ');
   } finally {
     btn.disabled = false;
-    btn.textContent = '🔄 حفظ يدوي الآن';
+    btn.textContent = '☁️ حفظ على GitHub';
     isSaving = false;
   }
 }
 
 /* ======= دالة الحفظ الفعلية على GitHub ======= */
-async function doGitHubSave(commitMessage){
+async function doGitHubSave(token, commitMessage){
   const productsJSON = JSON.stringify(products, null, 4);
   const storeJSON = JSON.stringify(storeSettings, null, 4);
 
@@ -363,7 +300,7 @@ async function doGitHubSave(commitMessage){
   const apiBase = 'https://api.github.com';
   const fileUrl = `${apiBase}/repos/${encodeURIComponent(GITHUB_CONFIG.owner)}/${encodeURIComponent(GITHUB_CONFIG.repo)}/contents/${encodeURIComponent(GITHUB_CONFIG.path)}`;
   const headers = {
-    'Authorization': 'Bearer ' + GITHUB_CONFIG.token,
+    'Authorization': 'Bearer ' + token,
     'Accept': 'application/vnd.github+json'
   };
 
@@ -376,7 +313,7 @@ async function doGitHubSave(commitMessage){
   } else if(getResp.status !== 404){
     const txt = await getResp.text();
     console.error('GitHub GET error:', getResp.status, txt);
-    return false;
+    throw new Error('فشل التحقق من الملف: ' + getResp.status);
   }
 
   // نحفظ الملف
@@ -402,30 +339,10 @@ async function doGitHubSave(commitMessage){
   return true;
 }
 
-/* ======= تفعيل/إيقاف الحفظ التلقائي ======= */
-function toggleAutoSave(){
-  GITHUB_CONFIG.autoSave = !GITHUB_CONFIG.autoSave;
-  localStorage.setItem('shop_autosave', GITHUB_CONFIG.autoSave);
-  updateAutoSaveUI();
-  showToast(GITHUB_CONFIG.autoSave ? '✅ الحفظ التلقائي مفعّل' : '⏸️ الحفظ التلقائي متوقف');
-}
-
-function updateAutoSaveUI(){
-  const toggle = document.getElementById('autoSaveToggle');
-  const status = document.getElementById('autoSaveStatus');
-  if(GITHUB_CONFIG.autoSave){
-    toggle.classList.add('active');
-    status.textContent = 'مفعّل';
-  } else {
-    toggle.classList.remove('active');
-    status.textContent = 'متوقف';
-  }
-}
-
-function updateLastSaveTime(){
-  const el = document.getElementById('lastSaveTime');
+function updateLastSaveInfo(status){
+  const el = document.getElementById('lastSaveInfo');
   const now = new Date().toLocaleString('ar-SY');
-  el.textContent = 'آخر حفظ: ' + now;
+  el.innerHTML = `<strong>${status}</strong><br><span style="font-size:11px;color:#999">${now}</span>`;
 }
 
 /* ======= واجهة المتجر ======= */
@@ -580,11 +497,7 @@ function saveProduct(){
   // تنظيف نموذج
   document.getElementById('productName').value='';document.getElementById('productDesc').value='';document.getElementById('productPrice').value='';document.getElementById('editProductId').value='';document.getElementById('productImageFile').value='';document.getElementById('imagePreview').style.display='none';
   currentImageBase64 = null;
-
-  // حفظ محلي + تلقائي على GitHub
-  saveLocalData();
-
-  renderAdminProducts(); renderStore(); showToast('✅ تم حفظ المنتج');
+  renderAdminProducts(); renderStore(); showToast('✅ تم حفظ المنتج محلياً — اضغط "حفظ على GitHub" لنشره للزباين');
 }
 
 function editProduct(id){
@@ -596,9 +509,7 @@ function editProduct(id){
 
 function deleteProduct(id){
   if(!confirm('تأكيد حذف المنتج؟')) return;
-  products = products.filter(p=>p.id!=id);
-  saveLocalData();
-  renderAdminProducts(); renderStore(); showToast('🗑️ حُذف المنتج');
+  products = products.filter(p=>p.id!=id); renderAdminProducts(); renderStore(); showToast('🗑️ حُذف المنتج محلياً — اضغط "حفظ على GitHub" لتحديثه للزباين');
 }
 
 function renderAdminProducts(){
@@ -625,8 +536,7 @@ function saveStoreSettings(){
   storeSettings.desc = document.getElementById('adminStoreDesc').value.trim() || storeSettings.desc;
   storeSettings.whatsapp = document.getElementById('adminWhatsapp').value.replace(/[^0-9]/g,'') || storeSettings.whatsapp;
   updateStoreDisplay();
-  saveLocalData();
-  showToast('✅ تم تحديث الإعدادات');
+  showToast('✅ تم تحديث الإعدادات محلياً — اضغط "حفظ على GitHub" لنشرها للزباين');
 }
 
 /* ======= حماية الدخول ======= */
