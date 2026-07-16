@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>توصل سريع - لوحة متجر</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}body{font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#f5f5f5;padding-bottom:120px;direction:rtl}
+    .header{background:#e74c3c;color:#fff;padding:14px;text-align:center;position:sticky;top:0;z-index:100}.nav{display:flex;gap:10px;padding:10px;overflow:auto;background:#fff;border-bottom:1px solid #ddd}
+    .nav-btn{padding:8px 14px;border-radius:20px;border:0;background:#ecf0f1;color:#333;cursor:pointer}
+    .nav-btn.active{background:#e74c3c;color:#fff}.products{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px}
+    .product-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;flex-direction:column}
+    .product-card img{width:100%;height:150px;object-fit:cover}
+    .product-info{padding:10px;flex:1}.add-cart-btn{width:100%;padding:10px;background:#27ae60;color:#fff;border:0;cursor:pointer;border-radius:6px}
+    .store-info,.admin-section{background:#fff;padding:15px;margin:10px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+    .admin-panel{display:none;padding:15px}
+    .hidden-admin-btn{position:fixed;bottom:0;left:0;width:12px;height:12px;background:transparent;border:0;opacity:0;cursor:pointer;z-index:99}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+    .modal-content{background:#fff;padding:20px;border-radius:12px;max-width:520px;width:100%;text-align:center;direction:rtl}
+    .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:20px;display:none;z-index:300}
+    .cart-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #e74c3c;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;z-index:90;box-shadow:0 -4px 12px rgba(0,0,0,0.08)}
+    .cart-icon{font-size:24px;position:relative}
+    .cart-count{position:absolute;top:-8px;right:-10px;background:#e74c3c;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold}
+    .cart-total{font-weight:bold;color:#e74c3c}
+    .cart-btn{background:#27ae60;color:#fff;padding:10px 14px;border-radius:20px;border:0;cursor:pointer}
+    .cart-items{max-height:300px;overflow:auto;text-align:right}
+    .cart-item{display:flex;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #eee}
+    .cart-item img{width:60px;height:60px;object-fit:cover;border-radius:8px}
+    .qty-btn{width:32px;height:32px;border-radius:6px;border:0;background:#ecf0f1;cursor:pointer}
+    .file-label{display:inline-block;padding:10px;background:#ecf0f1;border-radius:8px;border:2px dashed #bdc3c7;cursor:pointer;color:#7f8c8d}
+    .img-preview{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px dashed #ddd;display:block;margin-top:8px}
+    @media(min-width:768px){.products{grid-template-columns:repeat(3,1fr);max-width:900px;margin:0 auto}}
+  </style>
+</head>
+<body>
+
+  <div id="storeView">
+    <div class="header"><h1>🍽️ اوقات الدوام من 8:00 صباحاً إلى 22:00 مساءً</h1><div id="storeSubtitle" style="font-size:12px;opacity:.9">أطلب الآن عبر الواتساب</div></div>
+
+    <div class="store-info">
+      <h2 id="storeName">متجر الطعام</h2>
+      <p id="storeDesc">أشهى المأكولات</p>
+      <div style="margin-top:10px"><span style="background:#25d366;color:#fff;padding:8px 12px;border-radius:20px">📱 <span id="whatsappText">+963XXXXXXXXX</span></span></div>
+    </div>
+
+    <div class="nav" id="categoryNav">
+      <button class="nav-btn active" onclick="filterCategory('all', event)">الكل</button>
+      <button class="nav-btn" onclick="filterCategory('main', event)">أطباق رئيسية</button>
+      <button class="nav-btn" onclick="filterCategory('appetizer', event)">مقبلات</button>
+      <button class="nav-btn" onclick="filterCategory('drink', event)">مشروبات</button>
+      <button class="nav-btn" onclick="filterCategory('dessert', event)">حلويات</button>
+    </div>
+
+    <div class="products" id="productsContainer"></div>
+  </div>
+
+  <!-- Admin -->
+  <div id="adminPanel" class="admin-panel">
+    <button onclick="showStore()" style="background:#95a5a6;color:#fff;padding:10px;border-radius:8px;border:0;margin-bottom:12px;cursor:pointer">← العودة للمتجر</button>
+
+    <div class="admin-section">
+      <h3>⚙️ إعدادات المتجر</h3>
+      <label>اسم المتجر</label>
+      <input id="adminStoreName" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd">
+      <label>وصف المتجر</label>
+      <textarea id="adminStoreDesc" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd"></textarea>
+      <label>رقم الواتساب (بدون +)</label>
+      <input id="adminWhatsapp" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd">
+      <button onclick="saveStoreSettings()" style="background:#3498db;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%">💾 حفظ الإعدادات محلياً</button>
+    </div>
+
+    <div class="admin-section">
+      <h3>➕ إضافة/تعديل منتج</h3>
+      <input type="hidden" id="editProductId">
+      <label>اسم المنتج</label>
+      <input id="productName" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd">
+      <label>الوصف</label>
+      <textarea id="productDesc" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd"></textarea>
+      <label>السعر (ل.س)</label>
+      <input id="productPrice" type="number" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd">
+      <label>التصنيف</label>
+      <select id="productCategory" style="width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd">
+        <option value="main">أطباق رئيسية</option><option value="appetizer">مقبلات</option><option value="drink">مشروبات</option><option value="dessert">حلويات</option>
+      </select>
+
+      <label>صورة من المعرض (مباشرة من الهاتف)</label>
+      <label class="file-label" onclick="document.getElementById('productImageFile').click()">📷 اختيار صورة</label>
+      <input id="productImageFile" type="file" accept="image/*" style="display:none" onchange="previewImageFile(this)">
+      <img id="imagePreview" class="img-preview" style="display:none">
+
+      <div style="margin-top:10px">
+        <button onclick="saveProduct()" style="background:#27ae60;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%">💾 إضافة / تعديل المنتج</button>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <h3>📦 المنتجات الحالية</h3>
+      <div id="adminProductsList"></div>
+    </div>
+
+    <div class="admin-section">
+      <h3>⚠️ حفظ التغييرات إلى GitHub</h3>
+      <p style="font-size:13px;color:#666">اضغط للحفظ إلى المستودع: سُيطلب منك إدخال owner, repo, path (مثل index.html) وPersonal Access Token مؤقت (session only).</p>
+      <button onclick="startSaveToGitHub()" style="background:#8e44ad;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%">✨ حفظ إلى GitHub</button>
+    </div>
+  </div>
+
+  <button class="hidden-admin-btn" onclick="showAdmin()" title="لوحة التحكم"></button>
+
+  <div class="modal-overlay" id="passwordModal">
+    <div class="modal-content">
+      <h3>🔒 دخول لوحة التحكم</h3>
+      <input id="passwordInput" type="password" maxlength="6" placeholder="••••" style="padding:12px;width:80%;margin:12px 0;border-radius:8px;border:1px solid #ddd;text-align:center">
+      <div id="passwordError" style="color:#e74c3c;display:none;margin-bottom:8px">كلمة المرور غير صحيحة</div>
+      <button onclick="checkPassword()" style="background:#3498db;color:#fff;padding:10px;border-radius:8px;border:0;cursor:pointer;width:60%">دخول</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="cartModal">
+    <div class="modal-content" id="cartModalContent">
+      <h3>🛒 سلة المشتريات</h3>
+      <div class="cart-items" id="cartItems"></div>
+      <div id="cartSummary" style="margin-top:12px;text-align:right"></div>
+      <div style="margin-top:12px">
+        <label>ملاحظات الطلب</label>
+        <textarea id="cartNote" style="width:100%;padding:10px;border-radius:8px;border:1px solid #ddd"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="sendCartOrder()" style="flex:1;background:#27ae60;color:#fff;padding:10px;border-radius:8px;border:0;cursor:pointer">📱 إرسال عبر واتساب</button>
+        <button onclick="closeCartModal()" style="flex:1;background:#95a5a6;color:#fff;padding:10px;border-radius:8px;border:0;cursor:pointer">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="savingModal" style="display:none"><div class="modal-content" id="savingContent"><p>جاري الحفظ...</p></div></div>
+
+  <div class="cart-bar" id="cartBar" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="cart-icon">🛒<div class="cart-count" id="cartCount">0</div></div>
+      <div style="text-align:right">
+        <div style="font-size:13px;color:#666">السلة</div>
+        <div class="cart-total" id="cartTotal">0 ل.س</div>
+      </div>
+    </div>
+    <div>
+      <button class="cart-btn" onclick="openCartModal()">عرض السلة</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ======= بيانات افتراضية ======= */
+const ADMIN_PASSWORD = "085085";
+const defaultProducts = [
+  {"id":1,"name":"فتوش","desc":"سلطة شهية","price":400,"category":"appetizer","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Fattoush"},
+  {"id":16,"name":"وجبة كرسبي","desc":"تقدم مع بطاطا","price":1500,"category":"main","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Crispy"},
+  {"id":22,"name":"وجبة شاورما","desc":"لحم طازج","price":1000,"category":"main","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Shawarma"}
+];
+const defaultStore = {"name":"مطعم يزن","desc":"أشهى المأكولات - توصيل سريع","whatsapp":"963981738986"};
+
+/* ======= حالة التطبيق ======= */
+let products = [];
+let storeSettings = {};
+let cart = [];
+let currentCategory = 'all';
+let currentImageBase64 = null;
+
+/* ======= تهيئة ======= */
+function init(){
+  loadData();
+  renderStore();
+  renderAdminProducts();
+  updateCartUI();
+}
+function loadData(){
+  products = JSON.parse(JSON.stringify(defaultProducts));
+  storeSettings = JSON.parse(JSON.stringify(defaultStore));
+  const savedCart = localStorage.getItem('shop_cart_v1');
+  cart = savedCart ? JSON.parse(savedCart) : [];
+  updateStoreDisplay();
+}
+
+/* ======= واجهة المتجر ======= */
+function updateStoreDisplay(){
+  document.getElementById('storeName').textContent = storeSettings.name;
+  document.getElementById('storeDesc').textContent = storeSettings.desc;
+  document.getElementById('whatsappText').textContent = '+' + storeSettings.whatsapp;
+  document.getElementById('adminStoreName').value = storeSettings.name;
+  document.getElementById('adminStoreDesc').value = storeSettings.desc;
+  document.getElementById('adminWhatsapp').value = storeSettings.whatsapp;
+}
+
+function renderStore(){
+  const container = document.getElementById('productsContainer');
+  const filtered = currentCategory==='all' ? products : products.filter(p=>p.category===currentCategory);
+  if(filtered.length===0){ container.innerHTML = '<div style="padding:30px;text-align:center;color:#999">لا توجد منتجات</div>'; return; }
+  container.innerHTML = filtered.map(p=>`
+    <div class="product-card">
+      <img src="${p.image}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/400x300/e74c3c/ffffff?text=لا+صورة'">
+      <div class="product-info">
+        <div style="font-weight:bold;margin-bottom:6px">${p.name}</div>
+        <div style="color:#666;font-size:13px;margin-bottom:8px">${p.desc||''}</div>
+        <div style="font-weight:bold;color:#e74c3c">${p.price.toLocaleString()} ل.س</div>
+      </div>
+      <button class="add-cart-btn" onclick="addToCart(${p.id})">🛒 أضف للسلة</button>
+    </div>
+  `).join('');
+}
+
+/* ======= الفلترة ======= */
+function filterCategory(cat, ev){
+  currentCategory = cat;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(ev && ev.currentTarget) ev.currentTarget.classList.add('active');
+  renderStore();
+}
+
+/* ======= السلة ======= */
+function saveCartData(){ localStorage.setItem('shop_cart_v1', JSON.stringify(cart)); }
+function addToCart(id){
+  const p = products.find(x=>x.id==id); if(!p) return;
+  const item = cart.find(i=>i.id==id);
+  if(item) item.qty++;
+  else cart.push({id:p.id,name:p.name,price:p.price,image:p.image,qty:1});
+  saveCartData(); updateCartUI(); showToast('✅ أضيف للسلّة: '+p.name);
+}
+function changeQty(id, delta){
+  const it = cart.find(i=>i.id==id); if(!it) return;
+  it.qty += delta;
+  if(it.qty<=0) cart = cart.filter(i=>i.id!=id);
+  saveCartData(); renderCartModal(); updateCartUI();
+}
+function removeFromCart(id){
+  cart = cart.filter(i=>i.id!=id); saveCartData(); renderCartModal(); updateCartUI(); showToast('🗑️ تمت إزالة المنتج');
+}
+function updateCartUI(){
+  const totalItems = cart.reduce((s,i)=>s+i.qty,0);
+  const totalPrice = cart.reduce((s,i)=>s+i.qty*i.price,0);
+  document.getElementById('cartCount').textContent = totalItems;
+  document.getElementById('cartTotal').textContent = totalPrice.toLocaleString() + ' ل.س';
+  document.getElementById('cartBar').style.display = totalItems>0 ? 'flex' : 'none';
+}
+function openCartModal(){ renderCartModal(); document.getElementById('cartModal').style.display = 'flex'; }
+function closeCartModal(){ document.getElementById('cartModal').style.display = 'none'; }
+
+function renderCartModal(){
+  const container = document.getElementById('cartItems');
+  const summary = document.getElementById('cartSummary');
+  if(cart.length===0){
+    container.innerHTML = '<div style="padding:30px;text-align:center;color:#999">السلة فارغة</div>';
+    summary.innerHTML = ''; return;
+  }
+  container.innerHTML = cart.map(i=>`
+    <div class="cart-item">
+      <img src="${i.image}" onerror="this.src='https://via.placeholder.com/60/e74c3c/ffffff?text=?'">
+      <div style="flex:1;text-align:right">
+        <div style="font-weight:bold">${i.name}</div>
+        <div style="color:#e74c3c">${(i.price*i.qty).toLocaleString()} ل.س</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+        <div style="display:flex;gap:6px">
+          <button class="qty-btn" onclick="changeQty(${i.id},-1)">−</button>
+          <div style="min-width:26px;text-align:center;font-weight:bold">${i.qty}</div>
+          <button class="qty-btn" onclick="changeQty(${i.id},1)">+</button>
+        </div>
+        <button style="background:#e74c3c;color:#fff;padding:6px;border-radius:6px;border:0;cursor:pointer" onclick="removeFromCart(${i.id})">حذف</button>
+      </div>
+    </div>
+  `).join('');
+  const subtotal = cart.reduce((s,i)=>s+i.qty*i.price,0);
+  summary.innerHTML = `<div style="text-align:right">
+    <div style="margin-bottom:6px">المجموع: <strong>${subtotal.toLocaleString()} ل.س</strong></div>
+    <div style="margin-bottom:6px">التوصيل: <strong>مجاني</strong></div>
+    <div style="font-size:18px;font-weight:bold;color:#e74c3c">الإجمالي: ${subtotal.toLocaleString()} ل.س</div>
+  </div>`;
+}
+
+/* ======= إرسال الطلب عبر واتساب ======= */
+function sendCartOrder(){
+  if(cart.length===0){ showToast('السلة فارغة'); return; }
+  const note = document.getElementById('cartNote').value.trim();
+  const phone = storeSettings.whatsapp;
+  let message = `🛒 *طلب جديد من ${storeSettings.name}*%0A%0A`;
+  message += `📋 *المنتجات:*%0A`;
+  let total = 0;
+  cart.forEach((item,idx)=>{
+    const line = item.price*item.qty;
+    total += line;
+    message += `${idx+1}. ${item.name} × ${item.qty} = ${line.toLocaleString()} ل.س%0A`;
+  });
+  message += `%0A💰 *الإجمالي: ${total.toLocaleString()} ل.س*%0A`;
+  if(note) message += `%0A📝 *ملاحظة:* ${note}%0A`;
+  message += `%0A⏰ ${new Date().toLocaleString('ar-SY')}`;
+  window.open(`https://wa.me/${phone}?text=${message}`,'_blank');
+  cart = []; saveCartData(); updateCartUI(); closeCartModal(); showToast('📱 تم فتح الواتساب لإرسال الطلب!');
+}
+
+/* ======= إدارة المنتجات (صورة من المعرض) ======= */
+function previewImageFile(input){
+  if(input.files && input.files[0]){
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e){
+      currentImageBase64 = e.target.result;
+      const img = document.getElementById('imagePreview');
+      img.src = currentImageBase64;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function saveProduct(){
+  const name = document.getElementById('productName').value.trim();
+  const desc = document.getElementById('productDesc').value.trim();
+  const price = parseInt(document.getElementById('productPrice').value) || 0;
+  const category = document.getElementById('productCategory').value;
+  const editId = document.getElementById('editProductId').value;
+  if(!name || !price){ alert('ادخل اسم وسعر المنتج'); return; }
+  let image = currentImageBase64;
+  if(editId){
+    const idx = products.findIndex(p=>p.id==editId);
+    if(idx!==-1){
+      if(!image) image = products[idx].image;
+      products[idx] = {...products[idx], name, desc, price, category, image};
+    }
+  } else {
+    if(!image) image = 'https://via.placeholder.com/400x300/e74c3c/ffffff?text='+encodeURIComponent(name);
+    const newId = products.length ? Math.max(...products.map(p=>p.id))+1 : 1;
+    products.push({id:newId,name,desc,price,category,image});
+  }
+  // تنظيف نموذج
+  document.getElementById('productName').value='';document.getElementById('productDesc').value='';document.getElementById('productPrice').value='';document.getElementById('editProductId').value='';document.getElementById('productImageFile').value='';document.getElementById('imagePreview').style.display='none';
+  currentImageBase64 = null;
+  renderAdminProducts(); renderStore(); showToast('✅ تم حفظ المنتج محلياً');
+}
+
+function editProduct(id){
+  const p = products.find(x=>x.id==id); if(!p) return;
+  document.getElementById('productName').value = p.name; document.getElementById('productDesc').value = p.desc||''; document.getElementById('productPrice').value = p.price; document.getElementById('productCategory').value = p.category; document.getElementById('editProductId').value = p.id;
+  if(p.image && p.image.startsWith('data:')){ currentImageBase64 = p.image; document.getElementById('imagePreview').src = p.image; document.getElementById('imagePreview').style.display='block'; } else { currentImageBase64 = null; document.getElementById('imagePreview').style.display='none'; }
+  window.scrollTo(0,150);
+}
+
+function deleteProduct(id){
+  if(!confirm('تأكيد حذف المنتج؟')) return;
+  products = products.filter(p=>p.id!=id); renderAdminProducts(); renderStore(); showToast('🗑️ حُذف المنتج');
+}
+
+function renderAdminProducts(){
+  const container = document.getElementById('adminProductsList');
+  if(products.length===0){ container.innerHTML = '<p style="text-align:center;color:#999">لا توجد منتجات</p>'; return; }
+  container.innerHTML = products.map(p=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid #eee">
+      <img src="${p.image}" style="width:56px;height:56px;border-radius:8px;object-fit:cover" onerror="this.src='https://via.placeholder.com/60/e74c3c/ffffff?text=?'">
+      <div style="flex:1;text-align:right">
+        <div style="font-weight:bold">${p.name}</div>
+        <div style="color:#e74c3c">${p.price.toLocaleString()} ل.س</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="editProduct(${p.id})" style="background:#f39c12;color:#fff;border:0;padding:6px;border-radius:6px;cursor:pointer">تعديل</button>
+        <button onclick="deleteProduct(${p.id})" style="background:#e74c3c;color:#fff;border:0;padding:6px;border-radius:6px;cursor:pointer">حذف</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ======= إعداد المتجر ======= */
+function saveStoreSettings(){ storeSettings.name = document.getElementById('adminStoreName').value.trim() || storeSettings.name; storeSettings.desc = document.getElementById('adminStoreDesc').value.trim() || storeSettings.desc; storeSettings.whatsapp = document.getElementById('adminWhatsapp').value.replace(/[^0-9]/g,'') || storeSettings.whatsapp; updateStoreDisplay(); showToast('✅ تم تحديث الإعدادات محلياً'); }
+
+/* ======= حماية الدخول ======= */
+function showAdmin(){ document.getElementById('passwordInput').value=''; document.getElementById('passwordError').style.display='none'; document.getElementById('passwordModal').style.display='flex'; setTimeout(()=>document.getElementById('passwordInput').focus(),120); }
+function checkPassword(){ const v = document.getElementById('passwordInput').value; if(v===ADMIN_PASSWORD){ document.getElementById('passwordModal').style.display='none'; document.getElementById('storeView').style.display='none'; document.getElementById('adminPanel').style.display='block'; renderAdminProducts(); } else { document.getElementById('passwordError').style.display='block'; } }
+function closePasswordModal(){ document.getElementById('passwordModal').style.display='none'; }
+document.getElementById('passwordInput').addEventListener('keypress', e=>{ if(e.key==='Enter') checkPassword(); });
+function showStore(){ document.getElementById('storeView').style.display='block'; document.getElementById('adminPanel').style.display='none'; renderStore(); }
+
+/* ======= حفظ إلى GitHub (من المتصفح) ======= */
+async function startSaveToGitHub(){
+  try{
+    showSavingModal(true,'جاري تجهيز الكود...');
+    const productsJSON = JSON.stringify(products, null, 4);
+    const storeJSON = JSON.stringify(storeSettings, null, 4);
+
+    const pageHtml = await fetch(window.location.href, {cache:'no-store'}).then(r=>r.text());
+    let updatedHtml = pageHtml.replace(/const defaultProducts = \[[\s\S]*?\];/, `const defaultProducts = ${productsJSON};`);
+    updatedHtml = updatedHtml.replace(/const defaultStore = \{[\s\S]*?\};/, `const defaultStore = ${storeJSON};`);
+
+    const owner = prompt('ادخل owner (اسم الحساب أو المنظمة على GitHub):', localStorage.getItem('gh_owner')||'');
+    if(owner===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
+    const repo = prompt('ادخل repo (اسم المستودع):', localStorage.getItem('gh_repo')||'');
+    if(repo===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
+    const path = prompt('ادخل مسار الملف داخل المستودع (مثل index.html):', localStorage.getItem('gh_path')||'index.html');
+    if(path===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
+    const message = prompt('ادخل رسالة الـ commit:', 'Update store content from admin panel');
+    if(message===null){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
+
+    localStorage.setItem('gh_owner', owner); localStorage.setItem('gh_repo', repo); localStorage.setItem('gh_path', path);
+
+    let token = sessionStorage.getItem('gh_token') || '';
+    if(!token){
+      token = prompt('أدخل Personal Access Token (PAT) بصلاحية repo (سيُخزن مؤقتاً في هذه الجلسة فقط):');
+      if(!token){ showSavingModal(false); showToast('⛔ تم الإلغاء'); return; }
+      sessionStorage.setItem('gh_token', token);
+    }
+
+    showSavingModal(true,'جاري حفظ الملف على GitHub...');
+
+    const apiBase = 'https://api.github.com';
+    const fileUrl = `${apiBase}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodeURIComponent(path)}`;
+    const headers = {'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'};
+
+    let sha = null;
+    let getResp = await fetch(fileUrl, {headers});
+    if(getResp.status===200){ const d = await getResp.json(); sha = d.sha; }
+    else if(getResp.status===404){ sha = null; }
+    else { const txt = await getResp.text(); alert('فشل التحقق من الملف على GitHub: '+getResp.status+'\n'+txt); showSavingModal(false); return; }
+
+    const putBody = { message: message, content: btoa(unescape(encodeURIComponent(updatedHtml))), committer: { name: 'site-admin', email: 'admin@example.com' } };
+    if(sha) putBody.sha = sha;
+
+    const putResp = await fetch(fileUrl, { method:'PUT', headers:{...headers,'Content-Type':'application/json'}, body: JSON.stringify(putBody) });
+    if(!putResp.ok){ const txt = await putResp.text(); alert('فشل الحفظ على GitHub: '+putResp.status+'\n'+txt); showSavingModal(false); return; }
+    const putData = await putResp.json();
+    showSavingModal(false); showToast('✅ تم الحفظ في المستودع بنجاح!');
+    if(putData && putData.commit && putData.commit.html_url){ if(confirm('فتح صفحة commit على GitHub؟')) window.open(putData.commit.html_url,'_blank'); }
+  }catch(err){
+    console.error(err); showSavingModal(false); alert('حدث خطأ أثناء الحفظ: '+err);
+  }
+}
+
+function showSavingModal(show, text){
+  const m = document.getElementById('savingModal'); const c = document.getElementById('savingContent');
+  if(show){ c.innerHTML = `<p>${text||'جارٍ...'}</p>`; m.style.display='flex'; } else m.style.display='none';
+}
+
+/* ======= مساعدة ======= */
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); }
+
+/* ======= بدء ======= */
+window.onload = init;
+</script>
+
+</body>
+</html>
