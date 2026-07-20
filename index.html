@@ -43,9 +43,9 @@
     .fb-btn{background:#ffca28;color:#333;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%;margin-top:10px;font-size:15px;font-weight:bold}
     .fb-btn:hover{background:#ffc107}
     .fb-btn:disabled{background:#ccc;cursor:not-allowed}
+    .last-save-info{text-align:center;margin-top:8px;font-size:12px;color:#666;padding:8px;background:#f8f9fa;border-radius:6px}
     @media(min-width:768px){.products{grid-template-columns:repeat(3,1fr);max-width:900px;margin:0 auto}}
   </style>
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <base target="_blank">
@@ -247,7 +247,7 @@ function connectFirebase(){
   if(!url){ showToast('❌ ادخل رابط Firebase'); return; }
 
   FIREBASE_URL = url.replace(/\/$/, '');
-  localStorage.setItem('firebase_url', https://omer-cdd6c-default-rtdb.europe-west1.firebasedatabase.app/
+  localStorage.setItem('firebase_url', FIREBASE_URL);
 
   const btn = document.getElementById('connectFbBtn');
   btn.disabled = true;
@@ -383,7 +383,7 @@ function showConnectionStatus(online){
 function updateFbStatus(status){
   const el = document.getElementById('fbStatusInfo');
   const now = new Date().toLocaleString('ar-SY');
-  el.innerHTML = `<strong>${status}</strong><br><span style="font-size:11px;color:#999">${now}</span>`;
+  el.innerHTML = '<strong>' + status + '</strong><br><span style="font-size:11px;color:#999">' + now + '</span>';
 }
 
 /* ======= واجهة المتجر ======= */
@@ -400,17 +400,17 @@ function renderStore(){
   const container = document.getElementById('productsContainer');
   const filtered = currentCategory==='all' ? products : products.filter(p=>p.category===currentCategory);
   if(filtered.length===0){ container.innerHTML = '<div style="padding:30px;text-align:center;color:#999">لا توجد منتجات</div>'; return; }
-  container.innerHTML = filtered.map(p=>`
-    <div class="product-card">
-      <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x300/e74c3c/ffffff?text=لا+صورة'">
-      <div class="product-info">
-        <div style="font-weight:bold;margin-bottom:6px">${p.name}</div>
-        <div style="color:#666;font-size:13px;margin-bottom:8px">${p.desc||''}</div>
-        <div style="font-weight:bold;color:#e74c3c">${p.price.toLocaleString()} ل.س</div>
-      </div>
-      <button class="add-cart-btn" onclick="addToCart(${p.id})">🛒 أضف للسلة</button>
-    </div>
-  `).join('');
+  container.innerHTML = filtered.map(p=>'\
+    <div class="product-card">\
+      <img src="' + p.image + '" alt="' + p.name + '" onerror="this.src=\'https://placehold.co/400x300/e74c3c/ffffff?text=لا+صورة\'">\
+      <div class="product-info">\
+        <div style="font-weight:bold;margin-bottom:6px">' + p.name + '</div>\
+        <div style="color:#666;font-size:13px;margin-bottom:8px">' + (p.desc||'') + '</div>\
+        <div style="font-weight:bold;color:#e74c3c">' + p.price.toLocaleString() + ' ل.س</div>\
+      </div>\
+      <button class="add-cart-btn" onclick="addToCart(' + p.id + ')">🛒 أضف للسلة</button>\
+    </div>\
+  ').join('');
 }
 
 /* ======= الفلترة ======= */
@@ -456,29 +456,29 @@ function renderCartModal(){
     container.innerHTML = '<div style="padding:30px;text-align:center;color:#999">السلة فارغة</div>';
     summary.innerHTML = ''; return;
   }
-  container.innerHTML = cart.map(i=>`
-    <div class="cart-item">
-      <img src="${i.image}" onerror="this.src='https://placehold.co/60/e74c3c/ffffff?text=?'">
-      <div style="flex:1;text-align:right">
-        <div style="font-weight:bold">${i.name}</div>
-        <div style="color:#e74c3c">${(i.price*i.qty).toLocaleString()} ل.س</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
-        <div style="display:flex;gap:6px">
-          <button class="qty-btn" onclick="changeQty(${i.id},-1)">−</button>
-          <div style="min-width:26px;text-align:center;font-weight:bold">${i.qty}</div>
-          <button class="qty-btn" onclick="changeQty(${i.id},1)">+</button>
-        </div>
-        <button style="background:#e74c3c;color:#fff;padding:6px;border-radius:6px;border:0;cursor:pointer" onclick="removeFromCart(${i.id})">حذف</button>
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = cart.map(i=>'\
+    <div class="cart-item">\
+      <img src="' + i.image + '" onerror="this.src=\'https://placehold.co/60/e74c3c/ffffff?text=?\'">\
+      <div style="flex:1;text-align:right">\
+        <div style="font-weight:bold">' + i.name + '</div>\
+        <div style="color:#e74c3c">' + (i.price*i.qty).toLocaleString() + ' ل.س</div>\
+      </div>\
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:center">\
+        <div style="display:flex;gap:6px">\
+          <button class="qty-btn" onclick="changeQty(' + i.id + ',-1)">−</button>\
+          <div style="min-width:26px;text-align:center;font-weight:bold">' + i.qty + '</div>\
+          <button class="qty-btn" onclick="changeQty(' + i.id + ',1)">+</button>\
+        </div>\
+        <button style="background:#e74c3c;color:#fff;padding:6px;border-radius:6px;border:0;cursor:pointer" onclick="removeFromCart(' + i.id + ')">حذف</button>\
+      </div>\
+    </div>\
+  ').join('');
   const subtotal = cart.reduce((s,i)=>s+i.qty*i.price,0);
-  summary.innerHTML = `<div style="text-align:right">
-    <div style="margin-bottom:6px">المجموع: <strong>${subtotal.toLocaleString()} ل.س</strong></div>
-    <div style="margin-bottom:6px">التوصيل: <strong>مجاني</strong></div>
-    <div style="font-size:18px;font-weight:bold;color:#e74c3c">الإجمالي: ${subtotal.toLocaleString()} ل.س</div>
-  </div>`;
+  summary.innerHTML = '<div style="text-align:right">\
+    <div style="margin-bottom:6px">المجموع: <strong>' + subtotal.toLocaleString() + ' ل.س</strong></div>\
+    <div style="margin-bottom:6px">التوصيل: <strong>مجاني</strong></div>\
+    <div style="font-size:18px;font-weight:bold;color:#e74c3c">الإجمالي: ' + subtotal.toLocaleString() + ' ل.س</div>\
+  </div>';
 }
 
 /* ======= إرسال الطلب عبر واتساب ======= */
@@ -486,18 +486,18 @@ function sendCartOrder(){
   if(cart.length===0){ showToast('السلة فارغة'); return; }
   const note = document.getElementById('cartNote').value.trim();
   const phone = storeSettings.whatsapp || '963981738986';
-  let message = `🛒 *طلب جديد من ${storeSettings.name || 'المتجر'}*%0A%0A`;
-  message += `📋 *المنتجات:*%0A`;
+  let message = '🛒 *طلب جديد من ' + (storeSettings.name || 'المتجر') + '*%0A%0A';
+  message += '📋 *المنتجات:*%0A';
   let total = 0;
   cart.forEach((item,idx)=>{
     const line = item.price*item.qty;
     total += line;
-    message += `${idx+1}. ${item.name} × ${item.qty} = ${line.toLocaleString()} ل.س%0A`;
+    message += (idx+1) + '. ' + item.name + ' × ' + item.qty + ' = ' + line.toLocaleString() + ' ل.س%0A';
   });
-  message += `%0A💰 *الإجمالي: ${total.toLocaleString()} ل.س*%0A`;
-  if(note) message += `%0A📝 *ملاحظة:* ${note}%0A`;
-  message += `%0A⏰ ${new Date().toLocaleString('ar-SY')}`;
-  window.open(`https://wa.me/${phone}?text=${message}`,'_blank');
+  message += '%0A💰 *الإجمالي: ' + total.toLocaleString() + ' ل.س*%0A';
+  if(note) message += '%0A📝 *ملاحظة:* ' + note + '%0A';
+  message += '%0A⏰ ' + new Date().toLocaleString('ar-SY');
+  window.open('https://wa.me/' + phone + '?text=' + message,'_blank');
   cart = []; saveCartData(); updateCartUI(); closeCartModal(); showToast('📱 تم فتح الواتساب لإرسال الطلب!');
 }
 
@@ -531,7 +531,7 @@ function saveProduct(){
       products[idx] = {...products[idx], name, desc, price, category, image};
     }
   } else {
-    if(!image) image = 'https://placehold.co/400x300/e74c3c/ffffff?text='+encodeURIComponent(name);
+    if(!image) image = 'https://placehold.co/400x300/e74c3c/ffffff?text=' + encodeURIComponent(name);
     const newId = products.length ? Math.max(...products.map(p=>p.id))+1 : 1;
     products.push({id:newId,name,desc,price,category,image});
   }
@@ -567,19 +567,19 @@ function deleteProduct(id){
 function renderAdminProducts(){
   const container = document.getElementById('adminProductsList');
   if(products.length===0){ container.innerHTML = '<p style="text-align:center;color:#999">لا توجد منتجات</p>'; return; }
-  container.innerHTML = products.map(p=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid #eee">
-      <img src="${p.image}" style="width:56px;height:56px;border-radius:8px;object-fit:cover" onerror="this.src='https://placehold.co/60/e74c3c/ffffff?text=?'">
-      <div style="flex:1;text-align:right">
-        <div style="font-weight:bold">${p.name}</div>
-        <div style="color:#e74c3c">${p.price.toLocaleString()} ل.س</div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="editProduct(${p.id})" style="background:#f39c12;color:#fff;border:0;padding:6px;border-radius:6px;cursor:pointer">تعديل</button>
-        <button onclick="deleteProduct(${p.id})" style="background:#e74c3c;color:#fff;border:0;padding:6px;border-radius:6px;cursor:pointer">حذف</button>
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = products.map(p=>'\
+    <div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid #eee">\
+      <img src="' + p.image + '" style="width:56px;height:56px;border-radius:8px;object-fit:cover" onerror="this.src=\'https://placehold.co/60/e74c3c/ffffff?text=?\'">\
+      <div style="flex:1;text-align:right">\
+        <div style="font-weight:bold">' + p.name + '</div>\
+        <div style="color:#e74c3c">' + p.price.toLocaleString() + ' ل.س</div>\
+      </div>\
+      <div style="display:flex;gap:6px">\
+        <button onclick="editProduct(' + p.id + ')" style="background:#f39c12;color:#fff;border:0;padding:6px;border-radius:6px;cursor:pointer">تعديل</button>\
+        <button onclick="deleteProduct(' + p.id + ')" style="background:#e74c3c;color:#fff;border:0;padding:6px;border-radius:6px;cursor:pointer">حذف</button>\
+      </div>\
+    </div>\
+  ').join('');
 }
 
 /* ======= إعداد المتجر ======= */
