@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>توصل سريع - لوحة متجر</title>
+  <title>توصل سريع - متجر الطعام</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}body{font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#f5f5f5;padding-bottom:120px;direction:rtl}
     .header{background:#e74c3c;color:#fff;padding:14px;text-align:center;position:sticky;top:0;z-index:100}.nav{display:flex;gap:10px;padding:10px;overflow:auto;background:#fff;border-bottom:1px solid #ddd}
-    .nav-btn{padding:8px 14px;border-radius:20px;border:0;background:#ecf0f1;color:#333;cursor:pointer}
+    .nav-btn{padding:8px 14px;border-radius:20px;border:0;background:#ecf0f1;color:#333;cursor:pointer;white-space:nowrap}
     .nav-btn.active{background:#e74c3c;color:#fff}.products{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px}
     .product-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);display:flex;flex-direction:column}
     .product-card img{width:100%;height:150px;object-fit:cover}
@@ -29,38 +29,38 @@
     .qty-btn{width:32px;height:32px;border-radius:6px;border:0;background:#ecf0f1;cursor:pointer}
     .file-label{display:inline-block;padding:10px;background:#ecf0f1;border-radius:8px;border:2px dashed #bdc3c7;cursor:pointer;color:#7f8c8d}
     .img-preview{width:90px;height:90px;object-fit:cover;border-radius:8px;border:2px dashed #ddd;display:block;margin-top:8px}
-
-    /* ====== شريط حالة الحفظ ====== */
-    .save-status-bar{position:fixed;top:0;left:0;right:0;padding:8px 15px;text-align:center;font-size:13px;z-index:150;display:none;transition:all 0.3s}
-    .save-status-bar.saving{background:#f39c12;color:#fff}
-    .save-status-bar.saved{background:#27ae60;color:#fff}
-    .save-status-bar.error{background:#e74c3c;color:#fff}
-
-    /* ====== زر الحفظ على GitHub ====== */
-    .save-gh-btn{background:#8e44ad;color:#fff;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%;margin-top:10px;font-size:15px;font-weight:bold}
-    .save-gh-btn:hover{background:#732d91}
-    .save-gh-btn:disabled{background:#95a5a6;cursor:not-allowed}
-
-    .gh-input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-family:inherit}
-    .gh-input:focus{outline:none;border-color:#8e44ad}
-
-    .last-save-info{text-align:center;margin-top:8px;font-size:12px;color:#666;padding:8px;background:#f8f9fa;border-radius:6px}
-
+    .sync-status{position:fixed;top:0;left:0;right:0;padding:8px;text-align:center;font-size:13px;z-index:150;display:none}
+    .sync-status.syncing{background:#f39c12;color:#fff}
+    .sync-status.synced{background:#27ae60;color:#fff}
+    .sync-status.error{background:#e74c3c;color:#fff}
+    .sync-status.live{background:#3498db;color:#fff}
+    .firebase-badge{display:inline-block;background:#ffca28;color:#333;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:bold;margin-top:8px}
+    .connection-status{position:fixed;top:50px;right:10px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:bold;z-index:100;display:none}
+    .connection-status.online{background:#27ae60;color:#fff}
+    .connection-status.offline{background:#e74c3c;color:#fff}
+    .fb-input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #ddd;font-family:inherit}
+    .fb-input:focus{outline:none;border-color:#ffca28}
+    .fb-btn{background:#ffca28;color:#333;padding:12px;border-radius:8px;border:0;cursor:pointer;width:100%;margin-top:10px;font-size:15px;font-weight:bold}
+    .fb-btn:hover{background:#ffc107}
+    .fb-btn:disabled{background:#ccc;cursor:not-allowed}
     @media(min-width:768px){.products{grid-template-columns:repeat(3,1fr);max-width:900px;margin:0 auto}}
   </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <base target="_blank">
 </head>
 <body>
 
-  <!-- ====== شريط حالة الحفظ ====== -->
-  <div class="save-status-bar" id="saveStatusBar"></div>
+  <div class="sync-status" id="syncStatus"></div>
+  <div class="connection-status" id="connStatus"></div>
 
   <div id="storeView">
-    <div class="header"><h1>🍽️ اوقات الدوام من 8:00 صباحاً إلى 22:00 مساءً</h1><div id="storeSubtitle" style="font-size:12px;opacity:.9">أطلب الآن عبر الواتساب</div></div>
+    <div class="header"><h1>🍽️ اوقات الدوام من 8:00 صباحا إلى 22:00 مساء</h1><div id="storeSubtitle" style="font-size:12px;opacity:.9">أطلب الآن عبر الواتساب</div></div>
 
     <div class="store-info">
-      <h2 id="storeName">متجر الطعام</h2>
-      <p id="storeDesc">أشهى المأكولات</p>
+      <h2 id="storeName">جاري التحميل...</h2>
+      <p id="storeDesc">جاري الاتصال بقاعدة البيانات...</p>
       <div style="margin-top:10px"><span style="background:#25d366;color:#fff;padding:8px 12px;border-radius:20px">📱 <span id="whatsappText">+963XXXXXXXXX</span></span></div>
     </div>
 
@@ -72,10 +72,12 @@
       <button class="nav-btn" onclick="filterCategory('dessert', event)">حلويات</button>
     </div>
 
-    <div class="products" id="productsContainer"></div>
+    <div class="products" id="productsContainer">
+      <div style="padding:30px;text-align:center;color:#999">جاري الاتصال بـ Firebase...</div>
+    </div>
   </div>
 
-  <!-- Admin -->
+  <!-- Admin Panel -->
   <div id="adminPanel" class="admin-panel">
     <button onclick="showStore()" style="background:#95a5a6;color:#fff;padding:10px;border-radius:8px;border:0;margin-bottom:12px;cursor:pointer">← العودة للمتجر</button>
 
@@ -119,22 +121,35 @@
       <div id="adminProductsList"></div>
     </div>
 
-    <!-- ====== قسم الحفظ على GitHub (يدوي فقط) ====== -->
+    <!-- ====== قسم Firebase ====== -->
     <div class="admin-section">
-      <h3>☁️ حفظ على GitHub</h3>
+      <h3>🔥 Firebase Realtime Database</h3>
       <p style="font-size:13px;color:#666;margin-bottom:10px">
-        اضغط "حفظ على GitHub" لحفظ كل التعديلات على المستودع. الزباين راح يشوفون التعديلات فوراً.
+        اربط المتجر بـ Firebase لتحديث فوري! أي تعديل يظهر للزبائن فوراً بدون زر "حفظ".
       </p>
 
-      <label>GitHub Token (PAT)</label>
-      <input type="password" id="ghTokenInput" class="gh-input" placeholder="ادخل التوكن هنا...">
+      <label>Firebase Database URL</label>
+      <input id="fbUrlInput" class="fb-input" placeholder="https://your-project-default-rtdb.firebaseio.com/">
+      <div style="font-size:11px;color:#999;margin-top:4px">
+        <a href="https://console.firebase.google.com" target="_blank" style="color:#3498db">كيف أحصل على الرابط؟</a>
+      </div>
 
-      <button class="save-gh-btn" id="saveGhBtn" onclick="saveToGitHub()">
-        ☁️ حفظ على GitHub
+      <button class="fb-btn" id="connectFbBtn" onclick="connectFirebase()">
+        🔗 ربط بـ Firebase
       </button>
 
-      <div class="last-save-info" id="lastSaveInfo">
-        لم يتم الحفظ بعد
+      <div class="last-save-info" id="fbStatusInfo" style="margin-top:10px">
+        غير متصل بـ Firebase
+      </div>
+
+      <div style="margin-top:15px;padding:12px;background:#fff8e1;border-radius:8px;border:1px solid #ffecb3">
+        <div style="font-weight:bold;color:#f57c00;margin-bottom:6px">⚡ تحديث فوري</div>
+        <div style="font-size:13px;color:#666">
+          • تضيف منتج → يظهر فوراً للزبائن<br>
+          • تعدل سعر → يتحدث فوراً<br>
+          • تحذف منتج → يختفي فوراً<br>
+          <span class="firebase-badge">🔥 Firebase Connected</span>
+        </div>
       </div>
     </div>
   </div>
@@ -182,22 +197,22 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ======= إعدادات GitHub (مخفية — بدون توكن) ======= */
-const GITHUB_CONFIG = {
-  owner: "omerhalil32321-byte",
-  repo: "o",
-  path: "index.html"
-  // التوكن يُطلب عند الحفظ فقط
-};
+/* ======= إعدادات ======= */
+const ADMIN_PASSWORD = "085085";
+
+/* ======= Firebase ======= */
+let firebaseApp = null;
+let firebaseDb = null;
+let isFirebaseConnected = false;
+let FIREBASE_URL = localStorage.getItem('firebase_url') || '';
 
 /* ======= بيانات افتراضية ======= */
-const ADMIN_PASSWORD = "085085";
-const defaultProducts = [
+let defaultProducts = [
   {"id":1,"name":"فتوش","desc":"سلطة شهية","price":400,"category":"appetizer","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Fattoush"},
   {"id":16,"name":"وجبة كرسبي","desc":"تقدم مع بطاطا","price":1500,"category":"main","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Crispy"},
   {"id":22,"name":"وجبة شاورما","desc":"لحم طازج","price":1000,"category":"main","image":"https://placehold.co/400x300/e74c3c/ffffff?text=Shawarma"}
 ];
-const defaultStore = {"name":"مطعم يزن","desc":"أشهى المأكولات - توصيل سريع","whatsapp":"963981738986"};
+let defaultStore = {"name":"مطعم يزن","desc":"أشهى المأكولات - توصيل سريع","whatsapp":"963981738986"};
 
 /* ======= حالة التطبيق ======= */
 let products = [];
@@ -205,154 +220,180 @@ let storeSettings = {};
 let cart = [];
 let currentCategory = 'all';
 let currentImageBase64 = null;
-let isSaving = false;
 
 /* ======= تهيئة ======= */
 function init(){
-  loadData();
+  products = JSON.parse(JSON.stringify(defaultProducts));
+  storeSettings = JSON.parse(JSON.stringify(defaultStore));
+
+  const savedCart = localStorage.getItem('shop_cart_v1');
+  cart = savedCart ? JSON.parse(savedCart) : [];
+
+  updateStoreDisplay();
   renderStore();
   renderAdminProducts();
   updateCartUI();
+
+  // إذا في رابط Firebase محفوظ، نربط تلقائياً
+  if(FIREBASE_URL){
+    document.getElementById('fbUrlInput').value = FIREBASE_URL;
+    connectFirebase();
+  }
 }
 
-function loadData(){
-  products = JSON.parse(JSON.stringify(defaultProducts));
-  storeSettings = JSON.parse(JSON.stringify(defaultStore));
-  const savedCart = localStorage.getItem('shop_cart_v1');
-  cart = savedCart ? JSON.parse(savedCart) : [];
-  updateStoreDisplay();
+/* ======= ربط Firebase ======= */
+function connectFirebase(){
+  const url = document.getElementById('fbUrlInput').value.trim();
+  if(!url){ showToast('❌ ادخل رابط Firebase'); return; }
+
+  FIREBASE_URL = url.replace(/\/$/, '');
+  localStorage.setItem('firebase_url', https://omer-cdd6c-default-rtdb.europe-west1.firebasedatabase.app/
+
+  const btn = document.getElementById('connectFbBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الربط...';
+  showSync('syncing', '⏳ جاري الربط بـ Firebase...');
+
+  try{
+    // نهيئ Firebase
+    const config = {
+      databaseURL: FIREBASE_URL
+    };
+
+    if(firebaseApp){
+      firebase.app().delete();
+    }
+
+    firebaseApp = firebase.initializeApp(config);
+    firebaseDb = firebase.database();
+
+    // نستمع للتغييرات
+    setupFirebaseListeners();
+
+    isFirebaseConnected = true;
+    showConnectionStatus(true);
+    showSync('synced', '✅ متصل بـ Firebase — التحديث الفوري شغال!');
+    showToast('✅ تم الربط بـ Firebase!');
+    updateFbStatus('متصل بـ Firebase — التحديث الفوري شغال');
+
+    setTimeout(() => {
+      document.getElementById('syncStatus').style.display = 'none';
+    }, 3000);
+
+  } catch(err){
+    console.error('Firebase error:', err);
+    showSync('error', '❌ فشل الربط — تحقق من الرابط');
+    showToast('❌ فشل الربط بـ Firebase');
+    updateFbStatus('فشل الربط — تحقق من الرابط');
+    isFirebaseConnected = false;
+    showConnectionStatus(false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔗 ربط بـ Firebase';
+  }
 }
 
-/* ======= شريط حالة الحفظ ======= */
-function showSaveStatus(status, message){
-  const bar = document.getElementById('saveStatusBar');
-  bar.className = 'save-status-bar ' + status;
+/* ======= استماع Firebase (Real-time) ======= */
+function setupFirebaseListeners(){
+  if(!firebaseDb) return;
+
+  // استماع للمنتجات
+  firebaseDb.ref('products').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if(data){
+      // نحول من object إلى array
+      products = Object.values(data);
+      renderStore();
+      renderAdminProducts();
+      showSync('live', '⚡ تحديث فوري — منتجات جديدة!');
+      setTimeout(() => {
+        if(isFirebaseConnected) document.getElementById('syncStatus').style.display = 'none';
+      }, 2000);
+    }
+  });
+
+  // استماع للإعدادات
+  firebaseDb.ref('storeSettings').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if(data){
+      storeSettings = data;
+      updateStoreDisplay();
+      showSync('live', '⚡ تحديث فوري — إعدادات جديدة!');
+      setTimeout(() => {
+        if(isFirebaseConnected) document.getElementById('syncStatus').style.display = 'none';
+      }, 2000);
+    }
+  });
+}
+
+/* ======= حفظ في Firebase ======= */
+function saveToFirebase(){
+  if(!isFirebaseConnected || !firebaseDb){
+    showToast('❌ غير متصل بـ Firebase — اربط أولاً');
+    return false;
+  }
+
+  showSync('syncing', '⏳ جاري الحفظ في Firebase...');
+
+  try{
+    // نحول array إلى object (Firebase يفضل objects)
+    const productsObj = {};
+    products.forEach(p => {
+      productsObj[p.id] = p;
+    });
+
+    firebaseDb.ref('products').set(productsObj);
+    firebaseDb.ref('storeSettings').set(storeSettings);
+
+    showSync('synced', '✅ تم الحفظ في Firebase — الزبائن يشوفون فوراً!');
+    showToast('✅ تم الحفظ — الزبائن يشوفون فوراً!');
+    updateFbStatus('تم الحفظ — التحديث الفوري شغال');
+
+    setTimeout(() => {
+      document.getElementById('syncStatus').style.display = 'none';
+    }, 3000);
+
+    return true;
+  } catch(err){
+    console.error('Save error:', err);
+    showSync('error', '❌ فشل الحفظ');
+    showToast('❌ فشل الحفظ في Firebase');
+    return false;
+  }
+}
+
+/* ======= واجهة ======= */
+function showSync(status, message){
+  const bar = document.getElementById('syncStatus');
+  bar.className = 'sync-status ' + status;
   bar.textContent = message;
   bar.style.display = 'block';
-  if(status === 'saved' || status === 'error'){
+  if(status === 'synced' || status === 'error'){
     setTimeout(() => { bar.style.display = 'none'; }, 4000);
   }
 }
 
-/* ======= الحفظ على GitHub (يدوي + يطلب التوكن) ======= */
-async function saveToGitHub(){
-  if(isSaving) return;
-
-  const tokenInput = document.getElementById('ghTokenInput').value.trim();
-  if(!tokenInput){
-    showToast('❌ ادخل GitHub Token أولاً');
-    document.getElementById('ghTokenInput').focus();
-    return;
-  }
-
-  isSaving = true;
-  const btn = document.getElementById('saveGhBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الحفظ على GitHub...';
-  showSaveStatus('saving', '⏳ جاري الحفظ على GitHub...');
-
-  try{
-    const success = await doGitHubSave(tokenInput, 'Update store from admin panel');
-    if(success){
-      showSaveStatus('saved', '✅ تم الحفظ على GitHub — الزباين راح يشوفون التعديلات');
-      showToast('✅ تم الحفظ على GitHub بنجاح!');
-      updateLastSaveInfo('تم الحفظ بنجاح');
-      // نمسح التوكن من الحقل لأسباب أمان
-      document.getElementById('ghTokenInput').value = '';
-    } else {
-      showSaveStatus('error', '❌ فشل الحفظ على GitHub — تحقق من التوكن');
-      showToast('❌ فشل الحفظ — التوكن غير صحيح أو ما عنده صلاحية');
-    }
-  } catch(err){
-    console.error('Save error:', err);
-    showSaveStatus('error', '❌ خطأ: ' + (err.message || 'فشل الاتصال'));
-    showToast('❌ خطأ في الحفظ');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '☁️ حفظ على GitHub';
-    isSaving = false;
-  }
+function showConnectionStatus(online){
+  const el = document.getElementById('connStatus');
+  el.style.display = 'block';
+  el.className = 'connection-status ' + (online ? 'online' : 'offline');
+  el.textContent = online ? '🟢 متصل' : '🔴 غير متصل';
 }
 
-/* ======= دالة الحفظ الفعلية على GitHub ======= */
-async function doGitHubSave(token, commitMessage){
-  const productsJSON = JSON.stringify(products, null, 4);
-  const storeJSON = JSON.stringify(storeSettings, null, 4);
-
-  // نجيب HTML الصفحة الحالية
-  const pageHtml = document.documentElement.outerHTML;
-
-  // نستبدل البيانات في الكود
-  let updatedHtml = pageHtml;
-
-  // نستبدل defaultProducts
-  updatedHtml = updatedHtml.replace(
-    /const defaultProducts = \[[\s\S]*?\];/,
-    `const defaultProducts = ${productsJSON};`
-  );
-
-  // نستبدل defaultStore
-  updatedHtml = updatedHtml.replace(
-    /const defaultStore = \{[\s\S]*?\};/,
-    `const defaultStore = ${storeJSON};`
-  );
-
-  const apiBase = 'https://api.github.com';
-  const fileUrl = `${apiBase}/repos/${encodeURIComponent(GITHUB_CONFIG.owner)}/${encodeURIComponent(GITHUB_CONFIG.repo)}/contents/${encodeURIComponent(GITHUB_CONFIG.path)}`;
-  const headers = {
-    'Authorization': 'Bearer ' + token,
-    'Accept': 'application/vnd.github+json'
-  };
-
-  // نجيب SHA الملف الحالي
-  let sha = null;
-  let getResp = await fetch(fileUrl, {headers});
-  if(getResp.status === 200){
-    const d = await getResp.json();
-    sha = d.sha;
-  } else if(getResp.status !== 404){
-    const txt = await getResp.text();
-    console.error('GitHub GET error:', getResp.status, txt);
-    throw new Error('فشل التحقق من الملف: ' + getResp.status);
-  }
-
-  // نحفظ الملف
-  const putBody = {
-    message: commitMessage,
-    content: btoa(unescape(encodeURIComponent(updatedHtml))),
-    committer: { name: 'site-admin', email: 'admin@example.com' }
-  };
-  if(sha) putBody.sha = sha;
-
-  const putResp = await fetch(fileUrl, {
-    method: 'PUT',
-    headers: {...headers, 'Content-Type': 'application/json'},
-    body: JSON.stringify(putBody)
-  });
-
-  if(!putResp.ok){
-    const txt = await putResp.text();
-    console.error('GitHub PUT error:', putResp.status, txt);
-    return false;
-  }
-
-  return true;
-}
-
-function updateLastSaveInfo(status){
-  const el = document.getElementById('lastSaveInfo');
+function updateFbStatus(status){
+  const el = document.getElementById('fbStatusInfo');
   const now = new Date().toLocaleString('ar-SY');
   el.innerHTML = `<strong>${status}</strong><br><span style="font-size:11px;color:#999">${now}</span>`;
 }
 
 /* ======= واجهة المتجر ======= */
 function updateStoreDisplay(){
-  document.getElementById('storeName').textContent = storeSettings.name;
-  document.getElementById('storeDesc').textContent = storeSettings.desc;
-  document.getElementById('whatsappText').textContent = '+' + storeSettings.whatsapp;
-  document.getElementById('adminStoreName').value = storeSettings.name;
-  document.getElementById('adminStoreDesc').value = storeSettings.desc;
-  document.getElementById('adminWhatsapp').value = storeSettings.whatsapp;
+  document.getElementById('storeName').textContent = storeSettings.name || 'متجر الطعام';
+  document.getElementById('storeDesc').textContent = storeSettings.desc || 'أشهى المأكولات';
+  document.getElementById('whatsappText').textContent = '+' + (storeSettings.whatsapp || '963XXXXXXXXX');
+  document.getElementById('adminStoreName').value = storeSettings.name || '';
+  document.getElementById('adminStoreDesc').value = storeSettings.desc || '';
+  document.getElementById('adminWhatsapp').value = storeSettings.whatsapp || '';
 }
 
 function renderStore(){
@@ -361,7 +402,7 @@ function renderStore(){
   if(filtered.length===0){ container.innerHTML = '<div style="padding:30px;text-align:center;color:#999">لا توجد منتجات</div>'; return; }
   container.innerHTML = filtered.map(p=>`
     <div class="product-card">
-      <img src="${p.image}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/400x300/e74c3c/ffffff?text=لا+صورة'">
+      <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/400x300/e74c3c/ffffff?text=لا+صورة'">
       <div class="product-info">
         <div style="font-weight:bold;margin-bottom:6px">${p.name}</div>
         <div style="color:#666;font-size:13px;margin-bottom:8px">${p.desc||''}</div>
@@ -417,7 +458,7 @@ function renderCartModal(){
   }
   container.innerHTML = cart.map(i=>`
     <div class="cart-item">
-      <img src="${i.image}" onerror="this.src='https://via.placeholder.com/60/e74c3c/ffffff?text=?'">
+      <img src="${i.image}" onerror="this.src='https://placehold.co/60/e74c3c/ffffff?text=?'">
       <div style="flex:1;text-align:right">
         <div style="font-weight:bold">${i.name}</div>
         <div style="color:#e74c3c">${(i.price*i.qty).toLocaleString()} ل.س</div>
@@ -444,8 +485,8 @@ function renderCartModal(){
 function sendCartOrder(){
   if(cart.length===0){ showToast('السلة فارغة'); return; }
   const note = document.getElementById('cartNote').value.trim();
-  const phone = storeSettings.whatsapp;
-  let message = `🛒 *طلب جديد من ${storeSettings.name}*%0A%0A`;
+  const phone = storeSettings.whatsapp || '963981738986';
+  let message = `🛒 *طلب جديد من ${storeSettings.name || 'المتجر'}*%0A%0A`;
   message += `📋 *المنتجات:*%0A`;
   let total = 0;
   cart.forEach((item,idx)=>{
@@ -490,14 +531,20 @@ function saveProduct(){
       products[idx] = {...products[idx], name, desc, price, category, image};
     }
   } else {
-    if(!image) image = 'https://via.placeholder.com/400x300/e74c3c/ffffff?text='+encodeURIComponent(name);
+    if(!image) image = 'https://placehold.co/400x300/e74c3c/ffffff?text='+encodeURIComponent(name);
     const newId = products.length ? Math.max(...products.map(p=>p.id))+1 : 1;
     products.push({id:newId,name,desc,price,category,image});
   }
-  // تنظيف نموذج
   document.getElementById('productName').value='';document.getElementById('productDesc').value='';document.getElementById('productPrice').value='';document.getElementById('editProductId').value='';document.getElementById('productImageFile').value='';document.getElementById('imagePreview').style.display='none';
   currentImageBase64 = null;
-  renderAdminProducts(); renderStore(); showToast('✅ تم حفظ المنتج محلياً — اضغط "حفظ على GitHub" لنشره للزباين');
+  renderAdminProducts(); renderStore();
+
+  // حفظ تلقائي في Firebase
+  if(isFirebaseConnected){
+    saveToFirebase();
+  } else {
+    showToast('✅ تم حفظ المنتج محلياً — اربط Firebase للتحديث الفوري');
+  }
 }
 
 function editProduct(id){
@@ -509,7 +556,12 @@ function editProduct(id){
 
 function deleteProduct(id){
   if(!confirm('تأكيد حذف المنتج؟')) return;
-  products = products.filter(p=>p.id!=id); renderAdminProducts(); renderStore(); showToast('🗑️ حُذف المنتج محلياً — اضغط "حفظ على GitHub" لتحديثه للزباين');
+  products = products.filter(p=>p.id!=id); renderAdminProducts(); renderStore();
+  if(isFirebaseConnected){
+    saveToFirebase();
+  } else {
+    showToast('🗑️ حُذف المنتج محلياً');
+  }
 }
 
 function renderAdminProducts(){
@@ -517,7 +569,7 @@ function renderAdminProducts(){
   if(products.length===0){ container.innerHTML = '<p style="text-align:center;color:#999">لا توجد منتجات</p>'; return; }
   container.innerHTML = products.map(p=>`
     <div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid #eee">
-      <img src="${p.image}" style="width:56px;height:56px;border-radius:8px;object-fit:cover" onerror="this.src='https://via.placeholder.com/60/e74c3c/ffffff?text=?'">
+      <img src="${p.image}" style="width:56px;height:56px;border-radius:8px;object-fit:cover" onerror="this.src='https://placehold.co/60/e74c3c/ffffff?text=?'">
       <div style="flex:1;text-align:right">
         <div style="font-weight:bold">${p.name}</div>
         <div style="color:#e74c3c">${p.price.toLocaleString()} ل.س</div>
@@ -536,7 +588,11 @@ function saveStoreSettings(){
   storeSettings.desc = document.getElementById('adminStoreDesc').value.trim() || storeSettings.desc;
   storeSettings.whatsapp = document.getElementById('adminWhatsapp').value.replace(/[^0-9]/g,'') || storeSettings.whatsapp;
   updateStoreDisplay();
-  showToast('✅ تم تحديث الإعدادات محلياً — اضغط "حفظ على GitHub" لنشرها للزباين');
+  if(isFirebaseConnected){
+    saveToFirebase();
+  } else {
+    showToast('✅ تم تحديث الإعدادات محلياً');
+  }
 }
 
 /* ======= حماية الدخول ======= */
